@@ -579,6 +579,55 @@ DACWGGWTGAACWGTWTAYCCHCC
 TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
         };
 
+        function readUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                reference: params.get('reference') || params.get('ref'),
+                queries: params.get('queries') || params.get('q'),
+                rc: params.get('rc') === '1' || params.get('rc') === 'true',
+            };
+        }
+
+        function applyUrlParams() {
+            const { reference, queries, rc } = readUrlParams();
+            if (!reference && !queries) return false;
+
+            if (reference) document.getElementById('reference').value = reference;
+            if (queries) document.getElementById('queries').value = queries;
+            if (rc) document.getElementById('rcQueries').checked = true;
+
+            return Boolean(reference && queries);
+        }
+
+        function queriesToFasta(alignedList) {
+            return alignedList.map(aq => `>${aq.header}\n${aq.originalSequence}`).join('\n');
+        }
+
+        function syncUrl() {
+            const params = new URLSearchParams();
+            const ref = referenceSequence || cleanSequence(document.getElementById('reference').value);
+            if (ref) params.set('reference', ref);
+
+            const pendingQueries = document.getElementById('queries').value.trim();
+            if (alignedQueries.length > 0) {
+                params.set('queries', queriesToFasta(alignedQueries));
+            } else if (pendingQueries) {
+                params.set('queries', pendingQueries);
+            }
+
+            if (document.getElementById('rcQueries').checked) {
+                params.set('rc', '1');
+            }
+
+            const query = params.toString();
+            const url = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            history.replaceState(null, '', url);
+        }
+
+        function clearUrl() {
+            history.replaceState(null, '', window.location.pathname);
+        }
+
         async function loadModule() {
             try {
                 await new Promise(resolve => {
@@ -594,6 +643,9 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                     };
                     check();
                 });
+                if (applyUrlParams()) {
+                    alignSequences();
+                }
             } catch (e) {
                 document.getElementById('loading').textContent = 'Failed to load aligner. Ensure primal.js and primal.wasm are present.';
             }
@@ -1019,6 +1071,7 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                     const result = aligner.align(querySeq, referenceSequence);
                     const aligned = {
                         header: qs.header,
+                        originalSequence: qs.sequence,
                         isRC,
                         query: result.query,
                         subject: result.subject,
@@ -1047,6 +1100,7 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
 
             document.getElementById('resultPanel').classList.remove('hidden');
             renderAlignment();
+            syncUrl();
         }
 
         function clearAll() {
@@ -1060,12 +1114,14 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
             document.getElementById('resultPanel').classList.add('hidden');
             hideError();
             updateSelectionDisplay();
+            clearUrl();
         }
 
         function loadExample() {
             clearAll();
             document.getElementById('reference').value = EXAMPLE.reference;
             document.getElementById('queries').value = EXAMPLE.queries;
+            syncUrl();
         }
 
         document.getElementById('queries').addEventListener('keydown', e => {
