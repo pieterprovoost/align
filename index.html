@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Align - Local Sequence Alignment</title>
+    <meta name="description" content="Align DNA and RNA sequences against a reference in your browser. Supports multiple queries, IUPAC codes, reverse complement, and interactive position measurement.">
+    <meta name="application-name" content="Align">
+    <meta name="theme-color" content="#2d6a4f">
+    <meta property="og:title" content="Align - Local Sequence Alignment">
+    <meta property="og:description" content="Browser-based local sequence alignment with IUPAC support, multiple queries, and reverse complement.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Align - Local Sequence Alignment">
+    <meta name="twitter:description" content="Browser-based local sequence alignment with IUPAC support, multiple queries, and reverse complement.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>A</text></svg>">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Align",
+        "description": "Local sequence alignment against a reference with IUPAC code support.",
+        "applicationCategory": "BiologyApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript and WebAssembly"
+    }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #faf9f7;
+            --surface: #ffffff;
+            --border: #e8e4df;
+            --text: #1a1814;
+            --muted: #8a847a;
+            --accent: #2d6a4f;
+            --accent-soft: #d8f3dc;
+            --match: #40916c;
+            --similar: #b08968;
+            --mismatch: #c1121f;
+            --gap: #d4cfc6;
+            --select: #95d5b2;
+            --select-range: #b7e4c7;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', system-ui, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 0.25rem;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        label.checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: normal;
+            margin-bottom: 0;
+            cursor: pointer;
+            user-select: none;
+            line-height: 1;
+        }
+
+        label.checkbox input {
+            accent-color: var(--accent);
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 72px;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            line-height: 1.6;
+            resize: vertical;
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            align-items: center;
+        }
+
+        .checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            user-select: none;
+            line-height: 1;
+        }
+
+        .checkbox input {
+            accent-color: var(--accent);
+            width: 14px;
+            height: 14px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        .params {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+
+        .params input {
+            width: 52px;
+            padding: 0.3rem 0.4rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            text-align: center;
+            background: var(--bg);
+        }
+
+        button {
+            font-family: var(--sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+            padding: 0.55rem 1.25rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        button:hover { opacity: 0.88; }
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        button.ghost {
+            background: transparent;
+            color: var(--muted);
+            border: 1px solid var(--border);
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            font-size: 0.8rem;
+            line-height: 1;
+            color: var(--muted);
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.75rem;
+        }
+
+        .status-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .status-meta #refInfo {
+            white-space: nowrap;
+        }
+
+        .status-meta .dot {
+            color: var(--border);
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .status-bar .view-options {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .status-bar .view-options .checkbox {
+            font-size: 0.8rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .status-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .status-actions button {
+            padding: 0.4rem 0.65rem;
+            font-size: 0.8rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .selection-info {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            line-height: 1;
+            color: var(--accent);
+            white-space: nowrap;
+        }
+
+        .selection-info strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        @media (max-width: 720px) {
+            .status-bar {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .status-actions {
+                margin-left: 0;
+            }
+        }
+
+        #loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .hidden { display: none !important; }
+
+        .error {
+            background: #fde8e8;
+            color: var(--mismatch);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Alignment view */
+        .alignment-view {
+            overflow-x: auto;
+            padding: 0.5rem 0;
+        }
+
+        .alignment-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.8rem;
+        }
+
+        .alignment-summary .entry {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.75rem;
+            align-items: baseline;
+        }
+
+        .alignment-summary .name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .alignment-summary .meta {
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+        }
+
+        .seq-block {
+            margin-bottom: 1.5rem;
+        }
+
+        .seq-block:last-child { margin-bottom: 0; }
+
+        .block-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.5rem;
+            align-items: baseline;
+            margin-bottom: 0.6rem;
+            font-size: 0.8rem;
+        }
+
+        .block-header .name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .block-header .meta {
+            color: var(--muted);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+        }
+
+        .strand-badge {
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .seq-line {
+            display: flex;
+            align-items: center;
+            margin: 0;
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+
+        .query-group + .query-group {
+            margin-top: 0.55rem;
+        }
+
+        .seq-block-gap {
+            height: 0.5rem;
+        }
+
+        .ref-row {
+            margin-bottom: 2px;
+        }
+
+        .pos-label {
+            flex-shrink: 0;
+            width: 58px;
+            color: var(--muted);
+            font-size: 0.68rem;
+            text-align: right;
+            padding-right: 0.75rem;
+            user-select: none;
+        }
+
+        .seq-chars {
+            letter-spacing: 0.04em;
+            display: flex;
+            flex-wrap: nowrap;
+        }
+
+        .col {
+            display: inline-flex;
+            justify-content: center;
+            flex-shrink: 0;
+            min-width: 1ch;
+            font-family: var(--mono);
+        }
+
+        .ref-col {
+            cursor: crosshair;
+            transition: background 0.1s;
+        }
+
+        .ref-col:hover { background: var(--select-range); }
+        .ref-col.selected { background: var(--select); outline: 1px solid var(--accent); }
+        .ref-col.in-range { background: var(--select-range); }
+
+        .ref-col .base { font-weight: 500; color: var(--text); }
+
+        .nt-match { color: var(--match); }
+        .nt-similar { color: var(--similar); }
+        .nt-mismatch { color: var(--mismatch); }
+        .nt-gap { color: var(--gap); }
+        .nt-unaligned { color: #c4bfb6; }
+        .nt-plain { color: var(--text); }
+
+        .match-line {
+            opacity: 0.85;
+        }
+
+        .sym-match { color: var(--match); font-weight: 500; }
+        .sym-similar { color: var(--similar); }
+        .sym-mismatch { color: var(--mismatch); font-weight: 500; }
+        .sym-gap { color: var(--gap); }
+        .sym-unaligned { color: #c4bfb6; }
+
+        .ref-row .seq-chars { color: var(--text); }
+
+        .empty-state {
+            text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        details.params-toggle {
+            margin-top: 0.75rem;
+        }
+
+        details.params-toggle summary {
+            font-size: 0.8rem;
+            color: var(--muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        details.params-toggle .params {
+            margin-top: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>Align</h1>
+            <p>Local sequence alignment with IUPAC support</p>
+        </header>
+
+        <noscript>
+            <p>This aligner requires JavaScript and WebAssembly to run in your browser.</p>
+        </noscript>
+
+        <main>
+
+        <div id="loading">Loading aligner…</div>
+
+        <div id="appContent" class="hidden">
+            <div class="panel">
+                <label for="reference">Reference sequence</label>
+                <textarea id="reference" rows="3" placeholder="Paste reference nucleotide sequence"></textarea>
+
+                <div style="margin-top: 1rem">
+                    <label for="queries">Query sequences <span style="text-transform:none;letter-spacing:0;font-weight:400">(FASTA or plain text, multiple &gt;headers supported)</span></label>
+                    <textarea id="queries" rows="4" placeholder=">sample1&#10;GTAATACCTTTAAATAACTCCTGGTTTT&#10;>sample2&#10;GTAACTACCTTTAATAACTTGGTTTT"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="options">
+                        <label class="checkbox">
+                            <input type="checkbox" id="rcQueries">
+                            Reverse complement queries
+                        </label>
+                    </div>
+                    <button id="alignBtn" onclick="alignSequences()">Align</button>
+                    <button class="ghost" onclick="loadExample()">Load example</button>
+                    <button class="ghost" onclick="clearAll()">Clear</button>
+                </div>
+
+                <details class="params-toggle">
+                    <summary>Scoring parameters</summary>
+                    <div class="params">
+                        <span>Match <input type="number" id="exactMatch" value="3"></span>
+                        <span>IUPAC <input type="number" id="iupacMatch" value="2"></span>
+                        <span>Mismatch <input type="number" id="mismatch" value="-2"></span>
+                        <span>Gap <input type="number" id="gap" value="-3"></span>
+                    </div>
+                </details>
+            </div>
+
+            <div id="errorBox" class="error hidden"></div>
+
+            <div id="resultPanel" class="panel hidden">
+                <div class="status-bar">
+                    <div class="status-meta">
+                        <span id="refInfo"></span>
+                        <span class="dot hidden" id="selectionDot">·</span>
+                        <span class="selection-info hidden" id="selectionInfo"></span>
+                    </div>
+                    <div class="view-options">
+                        <label class="checkbox">
+                            <input type="checkbox" id="showMatchIndicators">
+                            Match indicators
+                        </label>
+                        <label class="checkbox">
+                            <input type="checkbox" id="colorNucleotides" checked>
+                            Color nucleotides
+                        </label>
+                    </div>
+                    <div class="status-actions">
+                        <button class="ghost" onclick="clearSelection()">Clear selection</button>
+                        <button class="ghost" id="copyBtn" onclick="copyAlignment()">Copy alignment</button>
+                    </div>
+                </div>
+                <div id="alignmentView" class="alignment-view"></div>
+            </div>
+        </div>
+        </main>
+    </div>
+
+    <script>
+        let primalModule = null;
+        let referenceSequence = '';
+        let alignedQueries = [];
+        let selection = { a: null, b: null };
+        const LINE_WIDTH = 80;
+        const COMPLEMENT = { A:'T', T:'A', G:'C', C:'G', R:'Y', Y:'R', S:'S', W:'W', K:'M', M:'K', B:'V', V:'B', D:'H', H:'D', N:'N' };
+
+        const EXAMPLE = {
+            reference: 'CATTTACTTTTAGGAAATCATCAAGTTTATAATGTTCTTATAACAGCTCATGCATTTCTTATGATTTTTTTTATGGTTATGCCCGTAATGATTGGAGGCTTTGGTAATTGATTAGTTCCTATAATGATTGGTAGTCCAGATATGGCATTTCCACGGTTAAATAACATTTCATTTTGATTACTTCCTCCTTCACTCTGCTTACTATTAATTTCAGCGATTGTAGAAGTAGGTGTTGGTACTGGATGAACAGTTTATCCGCCTCTTAGTTCAATTCAAAGTCATTCAGGTGCTGCTGTAGATTTAGCTATTTTTAGTCTTCATTTAGCAGGAGCTTCTTCAATTTTGGGCGCTGTTAATTTCATCTCAACTATTCTAAATATGCGTAGTCCTGGTCAAAGTATGTATAGAATTCCTTTATTTGTTTGATCCATATTTGTAACTGCATTTTTACTTTTGTTAGCAGTACCAGTTTTAGCAGGAGCTATTACAATGCTTTTAACTGATCGTAATTTTAATACTTCATTCTTTGATCCTGCAGGTGGGGGTGATCCAATTTTATATCAACATTTATTTTGATTTTTTGGCCATCCTGAAGTTTATATTCTTATTCTCCCGGGTTTTGGTATGATTAGCCATATAGTTTCAACATTTTCTAGAAAACCGGTTTTCGGATATATTGGAATGGTTTATGCAATGGTTTCTATAGGAGTCCTAGGTTTTATTGTTTGAGCTCATCATATGTACACAGTGGGTTTAGATGTTGATACTCGTGCTTATTTTACAGCAGCAACAATGATCATTGCTGTTCCAACTGGGATTAAAATATTTAGTTGAATAGCAACAATGTGAGAAGGGTCGATTCATTTAAAAACCCCCATGTTATTTGCAATTGGTTTTATTTTTTTGTTTACTATTGGTGGTCTAACTGGAATTGTACTTGCTAATTCAGGATTGGATATTAGTCTTCATGATACTTATTACGTTGTTGCTCATTTTCATTACGTACTTTCAATGGGAGCAGTTTTTGCAATTTTCGCAGGTTTTTATTATTGATTTGGTAAAATTACTGGTTTACAATATCCAGAAATGTTAGGTCAAATTCATTTTTGATCAACTTTTATTGGAGTAAATCTTACTTTTATGCCAATGCATTTTCTGGGTTTAGCTGGAATGCCAAGACGAATTCCTGATTATCCAGATGCTTACATAGGTTGAAATTTAGTTGCTTCTTATGGTTCTTATATTGCTCTTTTTAGTACTTTATTCTTTTTTTATGTTGTTTTTGTGTCATTAACTTCAAGTAATTCTTGTATGAATTTCCCCTGGGAA',
+            queries: `>query1
+DACWGGWTGAACWGTWTAYCCHCC
+>query2
+TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
+        };
+
+        async function loadModule() {
+            try {
+                await new Promise(resolve => {
+                    const check = () => {
+                        if (typeof Module !== 'undefined' && Module.calledRun) {
+                            primalModule = Module;
+                            document.getElementById('loading').classList.add('hidden');
+                            document.getElementById('appContent').classList.remove('hidden');
+                            resolve();
+                        } else {
+                            setTimeout(check, 80);
+                        }
+                    };
+                    check();
+                });
+            } catch (e) {
+                document.getElementById('loading').textContent = 'Failed to load aligner. Ensure primal.js and primal.wasm are present.';
+            }
+        }
+
+        function cleanSequence(seq) {
+            return seq.replace(/\s/g, '').toUpperCase();
+        }
+
+        function reverseComplement(seq) {
+            return seq.split('').reverse().map(c => COMPLEMENT[c] || c).join('');
+        }
+
+        function parseFasta(text) {
+            const sequences = [];
+            const lines = text.trim().split('\n');
+            let header = '';
+            let sequence = '';
+
+            for (let line of lines) {
+                line = line.trim();
+                if (!line) continue;
+                if (line.startsWith('>')) {
+                    if (header && sequence) {
+                        sequences.push({ header, sequence: cleanSequence(sequence) });
+                    }
+                    header = line.slice(1);
+                    sequence = '';
+                } else if (header) {
+                    sequence += line;
+                } else {
+                    if (!header) header = `seq${sequences.length + 1}`;
+                    sequence += line;
+                }
+            }
+            if (header && sequence) {
+                sequences.push({ header, sequence: cleanSequence(sequence) });
+            }
+            return sequences;
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('errorBox');
+            box.textContent = msg;
+            box.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorBox').classList.add('hidden');
+        }
+
+        function createSubjectPositionMap(query, subject, subjectStart) {
+            const map = {};
+            let subjectPos = 0;
+
+            for (let i = 0; i < subject.length; i++) {
+                const s = subject[i];
+                const q = query[i];
+
+                if (s === '-') {
+                    if (q !== '-' && subjectPos > 0) {
+                        const pos = subjectStart + subjectPos - 1;
+                        (map[pos] ||= []).push(q);
+                    }
+                } else {
+                    const pos = subjectStart + subjectPos;
+                    if (q === '-') {
+                        map[pos] = [];
+                    } else {
+                        (map[pos] ||= []).push(q);
+                    }
+                    subjectPos++;
+                }
+            }
+            return map;
+        }
+
+        function matchClass(matchChar) {
+            if (matchChar === '|') return 'nt-match';
+            if (matchChar === ':' || matchChar === '.') return 'nt-similar';
+            if (matchChar === ' ' || matchChar === '-') return 'nt-gap';
+            return 'nt-mismatch';
+        }
+
+        function buildMatchMap(aligned) {
+            const map = {};
+            let refPos = aligned.subjectStart;
+            const s = aligned.subject;
+            const m = aligned.matchLine;
+
+            for (let i = 0; i < s.length; i++) {
+                if (s[i] !== '-') {
+                    map[refPos] = matchClass(m[i]);
+                    refPos++;
+                }
+            }
+            return map;
+        }
+
+        function buildMatchSymbolMap(aligned) {
+            const map = {};
+            let refPos = aligned.subjectStart;
+            const s = aligned.subject;
+            const m = aligned.matchLine;
+
+            for (let i = 0; i < s.length; i++) {
+                if (s[i] !== '-') {
+                    map[refPos] = m[i];
+                    refPos++;
+                }
+            }
+            return map;
+        }
+
+        function matchSymbolClass(sym) {
+            if (sym === '|') return 'sym-match';
+            if (sym === ':' || sym === '.') return 'sym-similar';
+            if (sym === ' ' || sym === '-') return 'sym-gap';
+            return 'sym-mismatch';
+        }
+
+        function clearSelection() {
+            selection = { a: null, b: null };
+            updateSelectionDisplay();
+            renderAlignment();
+        }
+
+        function handlePositionClick(pos) {
+            if (selection.a === null) {
+                selection.a = pos;
+            } else if (selection.b === null) {
+                selection.b = pos;
+            } else {
+                selection = { a: pos, b: null };
+            }
+            updateSelectionDisplay();
+            renderAlignment();
+        }
+
+        function updateSelectionDisplay() {
+            const el = document.getElementById('selectionInfo');
+            const dot = document.getElementById('selectionDot');
+            const { a, b } = selection;
+
+            if (a === null) {
+                el.textContent = '';
+                el.classList.add('hidden');
+                dot.classList.add('hidden');
+                return;
+            }
+
+            el.classList.remove('hidden');
+            dot.classList.remove('hidden');
+
+            if (b === null) {
+                el.innerHTML = `pos <strong>${a}</strong>`;
+                return;
+            }
+            const lo = Math.min(a, b);
+            const hi = Math.max(a, b);
+            const length = hi - lo + 1;
+            el.innerHTML = `<strong>${lo}</strong>–<strong>${hi}</strong> · <strong>${length}</strong> nt`;
+        }
+
+        function isInSelection(pos) {
+            const { a, b } = selection;
+            if (a === null) return false;
+            if (b === null) return pos === a;
+            const lo = Math.min(a, b);
+            const hi = Math.max(a, b);
+            return pos >= lo && pos <= hi;
+        }
+
+        function columnWidthAt(maps, pos) {
+            let w = 1;
+            for (const map of maps) {
+                if (pos in map) w = Math.max(w, Math.max(1, map[pos].length));
+            }
+            return w;
+        }
+
+        function renderColumn(chars, width, cls, useColor) {
+            if (!chars) {
+                const gapCls = useColor ? 'nt-gap' : 'nt-plain';
+                return `<span class="${gapCls}">${'-'.repeat(width)}</span>`;
+            }
+            const text = chars.padEnd(width, '-');
+            let html = '';
+            for (const ch of text) {
+                const cellCls = ch === '-' ? (useColor ? 'nt-gap' : 'nt-plain') : (useColor ? cls : 'nt-plain');
+                html += `<span class="${cellCls}">${ch}</span>`;
+            }
+            return html;
+        }
+
+        function renderMatchColumn(sym, width, useColor) {
+            if (!sym) return `<span class="${useColor ? 'sym-unaligned' : 'nt-plain'}">${'·'.repeat(width)}</span>`;
+            const text = sym.padEnd(width, ' ');
+            let html = '';
+            for (const ch of text) {
+                const cls = !useColor ? 'nt-plain' : (ch === ' ' ? 'sym-gap' : matchSymbolClass(ch));
+                html += `<span class="${cls}">${ch === ' ' ? '·' : escapeHtml(ch)}</span>`;
+            }
+            return html;
+        }
+
+        function textColumn(chars, width) {
+            if (!chars) return '-'.repeat(width);
+            return chars.padEnd(width, '-');
+        }
+
+        function textMatchColumn(sym, width) {
+            if (!sym) return '·'.repeat(width);
+            return sym.replace(/ /g, '·').padEnd(width, '·');
+        }
+
+        function buildAlignmentText() {
+            const showIndicators = document.getElementById('showMatchIndicators').checked;
+            const ref = referenceSequence;
+            const maps = alignedQueries.map(aq => aq.subjectPositionMap);
+            const lines = [];
+
+            lines.push(`Reference (${ref.length} nt)`);
+            for (const aq of alignedQueries) {
+                const rc = aq.isRC ? ' [rev comp]' : '';
+                lines.push(`${aq.header}${rc}  score ${aq.score}  ${aq.identity.toFixed(1)}% id  ref ${aq.subjectStart + 1}–${aq.subjectEnd + 1}`);
+            }
+            lines.push('');
+
+            for (let blockStart = 0; blockStart < ref.length; blockStart += LINE_WIDTH) {
+                const blockEnd = Math.min(blockStart + LINE_WIDTH, ref.length);
+                const startPos = blockStart + 1;
+                const endPos = blockEnd;
+
+                lines.push(`${startPos}–${endPos}`);
+
+                let refLine = 'ref ';
+                for (let p = blockStart; p < blockEnd; p++) {
+                    const pos = p + 1;
+                    const w = columnWidthAt(maps, pos);
+                    refLine += ref[p].padEnd(w, ' ');
+                }
+                lines.push(refLine);
+
+                for (let qi = 0; qi < alignedQueries.length; qi++) {
+                    const aq = alignedQueries[qi];
+                    const posMap = maps[qi];
+
+                    if (showIndicators) {
+                        let indLine = '    ';
+                        for (let p = blockStart; p < blockEnd; p++) {
+                            const pos = p + 1;
+                            const w = columnWidthAt(maps, pos);
+                            indLine += textMatchColumn(aq.matchSymbolMap[pos], w);
+                        }
+                        lines.push(indLine);
+                    }
+
+                    let qLine = `Q${qi + 1}  `;
+                    for (let p = blockStart; p < blockEnd; p++) {
+                        const pos = p + 1;
+                        const w = columnWidthAt(maps, pos);
+                        if (pos in posMap) {
+                            qLine += textColumn(posMap[pos].join(''), w);
+                        } else {
+                            qLine += '·'.repeat(w);
+                        }
+                    }
+                    lines.push(qLine);
+                }
+
+                lines.push('');
+            }
+
+            return lines.join('\n').trimEnd();
+        }
+
+        async function copyAlignment() {
+            if (!referenceSequence || alignedQueries.length === 0) return;
+            const text = buildAlignmentText();
+            try {
+                await navigator.clipboard.writeText(text);
+                const btn = document.getElementById('copyBtn');
+                const prev = btn.textContent;
+                btn.textContent = 'Copied';
+                setTimeout(() => { btn.textContent = prev; }, 1500);
+            } catch (e) {
+                showError('Could not copy to clipboard.');
+            }
+        }
+
+        function renderAlignment() {
+            const view = document.getElementById('alignmentView');
+            const showIndicators = document.getElementById('showMatchIndicators').checked;
+            const useColor = document.getElementById('colorNucleotides').checked;
+            if (!referenceSequence || alignedQueries.length === 0) {
+                view.innerHTML = '<div class="empty-state">No alignments yet</div>';
+                return;
+            }
+
+            const ref = referenceSequence;
+            const maps = alignedQueries.map(aq => aq.subjectPositionMap);
+            let html = '';
+
+            let summaryHtml = '<div class="alignment-summary">';
+            for (let i = 0; i < alignedQueries.length; i++) {
+                const aq = alignedQueries[i];
+                summaryHtml += `
+                    <div class="entry">
+                        <span class="name">${escapeHtml(aq.header)}</span>
+                        ${aq.isRC ? '<span class="strand-badge">rev comp</span>' : ''}
+                        <span class="meta">score ${aq.score} · ${aq.identity.toFixed(1)}% id · ref ${aq.subjectStart + 1}–${aq.subjectEnd + 1}</span>
+                    </div>`;
+            }
+            summaryHtml += '</div>';
+
+            for (let blockStart = 0; blockStart < ref.length; blockStart += LINE_WIDTH) {
+                const blockEnd = Math.min(blockStart + LINE_WIDTH, ref.length);
+                const startPos = blockStart + 1;
+
+                html += `<div class="seq-line ref-row"><span class="pos-label">${startPos}</span><span class="seq-chars">`;
+                for (let p = blockStart; p < blockEnd; p++) {
+                    const pos = p + 1;
+                    const w = columnWidthAt(maps, pos);
+                    let cls = 'col ref-col';
+                    if (selection.a === pos && selection.b === null) cls += ' selected';
+                    else if (isInSelection(pos)) cls += ' in-range';
+                    html += `<span class="${cls}" style="min-width:${w}ch" onclick="handlePositionClick(${pos})"><span class="base">${ref[p]}</span></span>`;
+                }
+                html += `</span></div>`;
+
+                for (let qi = 0; qi < alignedQueries.length; qi++) {
+                    const aq = alignedQueries[qi];
+                    const posMap = maps[qi];
+                    const matchMap = aq.matchMap;
+                    const label = `Q${qi + 1}`;
+
+                    html += `<div class="query-group">`;
+
+                    if (showIndicators) {
+                        const symMap = aq.matchSymbolMap;
+                        html += `<div class="seq-line match-line"><span class="pos-label" title="${escapeHtml(aq.header)}">${label}</span><span class="seq-chars">`;
+                        for (let p = blockStart; p < blockEnd; p++) {
+                            const pos = p + 1;
+                            const w = columnWidthAt(maps, pos);
+                            if (pos in symMap) {
+                                html += `<span class="col" style="min-width:${w}ch">${renderMatchColumn(symMap[pos], w, useColor)}</span>`;
+                            } else {
+                                html += `<span class="col ${useColor ? 'sym-unaligned' : 'nt-plain'}" style="min-width:${w}ch">${'·'.repeat(w)}</span>`;
+                            }
+                        }
+                        html += `</span></div>`;
+                    }
+
+                    html += `<div class="seq-line"><span class="pos-label" title="${escapeHtml(aq.header)}">${showIndicators ? '' : label}</span><span class="seq-chars">`;
+                    for (let p = blockStart; p < blockEnd; p++) {
+                        const pos = p + 1;
+                        const w = columnWidthAt(maps, pos);
+
+                        if (pos in posMap) {
+                            const chars = posMap[pos].join('');
+                            const cls = matchMap[pos] || 'nt-unaligned';
+                            html += `<span class="col" style="min-width:${w}ch">${renderColumn(chars, w, cls, useColor)}</span>`;
+                        } else {
+                            html += `<span class="col ${useColor ? 'nt-unaligned' : 'nt-plain'}" style="min-width:${w}ch">${'·'.repeat(w)}</span>`;
+                        }
+                    }
+                    html += `</span></div></div>`;
+                }
+
+                html += `<div class="seq-block-gap"></div>`;
+            }
+
+            view.innerHTML = summaryHtml + html;
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+
+        function alignSequences() {
+            hideError();
+            if (!primalModule) {
+                showError('Aligner not loaded yet.');
+                return;
+            }
+
+            const rcQueries = document.getElementById('rcQueries').checked;
+            const queryText = document.getElementById('queries').value;
+            const querySeqs = parseFasta(queryText);
+
+            if (querySeqs.length === 0) {
+                showError('Enter at least one query sequence.');
+                return;
+            }
+
+            let ref = referenceSequence || cleanSequence(document.getElementById('reference').value);
+            if (!ref) {
+                showError('Enter a reference sequence.');
+                return;
+            }
+
+            if (!referenceSequence) {
+                referenceSequence = ref;
+                document.getElementById('reference').disabled = true;
+            }
+
+            const exactMatch = parseInt(document.getElementById('exactMatch').value);
+            const iupacMatch = parseInt(document.getElementById('iupacMatch').value);
+            const mismatch = parseInt(document.getElementById('mismatch').value);
+            const gap = parseInt(document.getElementById('gap').value);
+
+            try {
+                const aligner = new primalModule.Aligner(exactMatch, iupacMatch, mismatch, gap);
+
+                for (const qs of querySeqs) {
+                    let querySeq = qs.sequence;
+                    const isRC = rcQueries;
+                    if (isRC) querySeq = reverseComplement(querySeq);
+
+                    const result = aligner.align(querySeq, referenceSequence);
+                    const aligned = {
+                        header: qs.header,
+                        isRC,
+                        query: result.query,
+                        subject: result.subject,
+                        matchLine: result.match_line,
+                        score: result.score,
+                        identity: result.identity,
+                        similarity: result.similarity,
+                        subjectStart: result.subjectStart,
+                        subjectEnd: result.subjectEnd
+                    };
+                    aligned.subjectPositionMap = createSubjectPositionMap(
+                        aligned.query, aligned.subject, aligned.subjectStart
+                    );
+                    aligned.matchMap = buildMatchMap(aligned);
+                    aligned.matchSymbolMap = buildMatchSymbolMap(aligned);
+                    alignedQueries.push(aligned);
+                }
+            } catch (e) {
+                showError(`Alignment failed: ${e.message}`);
+                return;
+            }
+
+            document.getElementById('queries').value = '';
+            document.getElementById('refInfo').textContent =
+                `${referenceSequence.length} nt reference · ${alignedQueries.length} alignment${alignedQueries.length > 1 ? 's' : ''}`;
+
+            document.getElementById('resultPanel').classList.remove('hidden');
+            renderAlignment();
+        }
+
+        function clearAll() {
+            referenceSequence = '';
+            alignedQueries = [];
+            selection = { a: null, b: null };
+            document.getElementById('reference').value = '';
+            document.getElementById('reference').disabled = false;
+            document.getElementById('queries').value = '';
+            document.getElementById('rcQueries').checked = false;
+            document.getElementById('resultPanel').classList.add('hidden');
+            hideError();
+            updateSelectionDisplay();
+        }
+
+        function loadExample() {
+            clearAll();
+            document.getElementById('reference').value = EXAMPLE.reference;
+            document.getElementById('queries').value = EXAMPLE.queries;
+        }
+
+        document.getElementById('queries').addEventListener('keydown', e => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                alignSequences();
+            }
+        });
+
+        document.getElementById('showMatchIndicators').addEventListener('change', renderAlignment);
+        document.getElementById('colorNucleotides').addEventListener('change', renderAlignment);
+
+        loadModule();
+    </script>
+    <script src="primal.js"></script>
+</body>
+</html>
