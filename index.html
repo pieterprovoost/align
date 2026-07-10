@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Align - Local Sequence Alignment</title>
+    <title>DNA &amp; RNA Sequence Aligner | Align</title>
     <meta name="description" content="Align DNA and RNA sequences against a reference in your browser. Supports multiple queries, IUPAC codes, reverse complement, and interactive position measurement.">
+    <link rel="canonical" href="https://align.pieterprovoost.be/">
     <meta name="application-name" content="Align">
     <meta name="theme-color" content="#2d6a4f">
-    <meta property="og:title" content="Align - Local Sequence Alignment">
+    <meta property="og:title" content="DNA &amp; RNA Sequence Aligner | Align">
     <meta property="og:description" content="Browser-based local sequence alignment with IUPAC support, multiple queries, and reverse complement.">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://align.pieterprovoost.be/">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Align - Local Sequence Alignment">
+    <meta name="twitter:title" content="DNA &amp; RNA Sequence Aligner | Align">
     <meta name="twitter:description" content="Browser-based local sequence alignment with IUPAC support, multiple queries, and reverse complement.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>A</text></svg>">
     <script type="application/ld+json">
@@ -19,7 +21,8 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Align",
-        "description": "Local sequence alignment against a reference with IUPAC code support.",
+        "url": "https://align.pieterprovoost.be/",
+        "description": "Browser-based DNA and RNA local sequence alignment against a reference with IUPAC code support.",
         "applicationCategory": "BiologyApplication",
         "operatingSystem": "Any",
         "browserRequirements": "Requires JavaScript and WebAssembly"
@@ -73,9 +76,12 @@
             letter-spacing: -0.02em;
         }
 
-        header p {
+        header h1 .tagline {
+            display: block;
             color: var(--muted);
             font-size: 0.9rem;
+            font-weight: 400;
+            letter-spacing: normal;
             margin-top: 0.25rem;
         }
 
@@ -488,8 +494,7 @@
 <body>
     <div class="app">
         <header>
-            <h1>Align</h1>
-            <p>Local sequence alignment with IUPAC support</p>
+            <h1>Align <span class="tagline">Local DNA and RNA sequence alignment with IUPAC support</span></h1>
         </header>
 
         <noscript>
