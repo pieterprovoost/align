@@ -760,6 +760,9 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                 if (s[i] !== '-') {
                     map[refPos] = m[i];
                     refPos++;
+                } else if (refPos > aligned.subjectStart) {
+                    // Keep insertion match symbols so widened columns stay aligned.
+                    map[refPos - 1] = (map[refPos - 1] || '') + m[i];
                 }
             }
             return map;
@@ -876,7 +879,7 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
             lines.push(`Reference (${ref.length} nt)`);
             for (const aq of alignedQueries) {
                 const rc = aq.isRC ? ' [rev comp]' : '';
-                lines.push(`${aq.header}${rc}  score ${aq.score}  ${aq.identity.toFixed(1)}% id  ref ${aq.subjectStart + 1}–${aq.subjectEnd + 1}`);
+                lines.push(`${aq.header}${rc}  score ${aq.score}  ${aq.identity.toFixed(1)}% id  ref ${aq.subjectStart}–${aq.subjectEnd}`);
             }
             lines.push('');
 
@@ -891,7 +894,8 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                 for (let p = blockStart; p < blockEnd; p++) {
                     const pos = p + 1;
                     const w = columnWidthAt(maps, pos);
-                    refLine += ref[p].padEnd(w, ' ');
+                    // Extra width is from query insertions; show as gaps in the reference.
+                    refLine += ref[p] + '-'.repeat(w - 1);
                 }
                 lines.push(refLine);
 
@@ -962,7 +966,7 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                     <div class="entry">
                         <span class="name">${escapeHtml(aq.header)}</span>
                         ${aq.isRC ? '<span class="strand-badge">rev comp</span>' : ''}
-                        <span class="meta">score ${aq.score} · ${aq.identity.toFixed(1)}% id · ref ${aq.subjectStart + 1}–${aq.subjectEnd + 1}</span>
+                        <span class="meta">score ${aq.score} · ${aq.identity.toFixed(1)}% id · ref ${aq.subjectStart}–${aq.subjectEnd}</span>
                     </div>`;
             }
             summaryHtml += '</div>';
@@ -978,7 +982,10 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                     let cls = 'col ref-col';
                     if (selection.a === pos && selection.b === null) cls += ' selected';
                     else if (isInSelection(pos)) cls += ' in-range';
-                    html += `<span class="${cls}" style="min-width:${w}ch" onclick="handlePositionClick(${pos})"><span class="base">${ref[p]}</span></span>`;
+                    const insertionGaps = w > 1
+                        ? `<span class="nt-gap">${'-'.repeat(w - 1)}</span>`
+                        : '';
+                    html += `<span class="${cls}" style="min-width:${w}ch" onclick="handlePositionClick(${pos})"><span class="base">${ref[p]}</span>${insertionGaps}</span>`;
                 }
                 html += `</span></div>`;
 
@@ -1074,6 +1081,8 @@ TCHATTYTAGGRGCHRTTAATTTTATTACAAC`
                     if (isRC) querySeq = reverseComplement(querySeq);
 
                     const result = aligner.align(querySeq, referenceSequence);
+                    // Primal returns 1-based inclusive subjectStart/subjectEnd (and queryStart/queryEnd),
+                    // plus gapped query/subject/match_line strings of equal length.
                     const aligned = {
                         header: qs.header,
                         originalSequence: qs.sequence,
